@@ -86,10 +86,13 @@ creates `v0.2.0b0`, then `v0.2.0b1`, and so on.
 Repository administrators must configure:
 
 - A `pypi` GitHub Environment with required reviewers.
-- A PyPI Trusted Publisher for this repository's `Release` workflow and
-  `pypi` environment.
-- A `github-pages` Environment with required reviewers.
-- GitHub Pages configured to deploy from GitHub Actions.
+- A PyPI Trusted Publisher with owner `giladshay`, repository
+   `strawberry-graphql-resolver`, workflow `release.yml`, and environment
+   `pypi`.
+- A `github-pages` Environment with required reviewers and a deployment
+   branch/tag rule that allows `v*` tags.
+- GitHub Pages enabled under **Settings > Pages**, with **GitHub Actions**
+   selected as the build and deployment source.
 
 The release workflow never stores a PyPI token. Its `id-token: write`
 permission is used by PyPI's OIDC Trusted Publishing. If a build fails, fix
