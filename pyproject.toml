@@ -1,6 +1,6 @@
 [project]
 name = "strawberry-graphql-resolver"
-version = "0.1.0"
+version = "0.1.0b"
 description = "Resolve and map Pydantic models to Strawberry GraphQL types."
 readme = "README.md"
 authors = [
