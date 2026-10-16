@@ -137,6 +137,19 @@ public behavior should include typed implementation, parameterized tests,
 documentation, and docstrings. Pull requests should pass the repository
 pre-commit hooks.
 
+## Releases
+
+Maintainers manually run **Create release tag** in GitHub Actions. The
+workflow derives the tag from `pyproject.toml`: a normal `0.2.0` version
+becomes `v0.2.0`, while a beta version ending in `b` increments tags as
+`v0.2.0b0`, `v0.2.0b1`, and so on.
+
+The `Release` workflow builds the package and documentation for `v*` tags.
+PyPI and GitHub Pages publication are protected by GitHub Environment approval
+gates and use PyPI Trusted Publishing through OIDC. See the
+[developer release guide](docs/developers.md#release-process) for maintainer
+setup.
+
 ## License
 
 See the repository for licensing information.

@@ -25,6 +25,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "alabaster"
 suppress_warnings = [
     "autodoc",
+    "ref",
     "ref.python",
     "sphinx_autodoc_typehints.forward_reference",
 ]
