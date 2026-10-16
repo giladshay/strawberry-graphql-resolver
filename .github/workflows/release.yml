@@ -96,6 +96,28 @@ jobs:
         with:
           packages-dir: dist/
 
+  publish-github-release:
+    name: Create GitHub release
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - name: Create latest GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/* \
+            --verify-tag \
+            --title "Release $RELEASE_TAG" \
+            --generate-notes \
+            --latest
+
   publish-pages:
     name: Publish documentation to GitHub Pages
     needs: prepare

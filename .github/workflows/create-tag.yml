@@ -10,6 +10,7 @@ on:
         type: string
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -25,6 +26,7 @@ jobs:
           python-version: "3.12"
       - name: Calculate and create version tag
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG_REF: ${{ inputs.ref }}
         run: |
           set -euo pipefail
@@ -59,4 +61,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate "$TAG" "$TAG_REF" --message "Release $TAG"
           git push origin "$TAG"
+          gh workflow run release.yml --ref "$TAG" --field tag="$TAG"
           echo "Created $TAG from $TAG_REF"
