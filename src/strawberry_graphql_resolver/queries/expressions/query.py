@@ -10,6 +10,8 @@ from strawberry_graphql_resolver.queries.expressions.sort import QuerySortExpres
 
 
 class QueryExpression(BaseQueryExpression):
+    """Represent the complete query sent to a GraphQL resolver."""
+
     _query_input_name: str = PrivateAttr(default="QueryInput")
     schema_name: str
     field_names: list[str] = Field(default_factory=list)
@@ -17,6 +19,7 @@ class QueryExpression(BaseQueryExpression):
     sorts: list[QuerySortExpression] = Field(default_factory=list)
 
     def to_graphql(self) -> tuple[str, dict[str, Any]]:
+        """Return a GraphQL document and variables payload for this query."""
         filters = self._to_graphql_filters()
         sorts = self._to_graphql_sorts()
         query_input: dict[str, Any] = {}

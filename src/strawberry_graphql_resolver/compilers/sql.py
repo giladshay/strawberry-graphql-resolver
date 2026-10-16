@@ -18,6 +18,8 @@ _COMPARISON_TO_SQL: dict[Comparison, SqlComparison] = {
 
 @dataclass(frozen=True)
 class SQLQuery:
+    """Parameterized SQL Server query produced from a query expression."""
+
     statement: str
     parameters: tuple[Any, ...]
     filters: tuple[tuple[str, str, Any], ...]
@@ -25,6 +27,7 @@ class SQLQuery:
 
 
 def compile_sql(query: QueryExpression) -> SQLQuery:
+    """Compile a query expression into SQL text and bound parameters."""
     filters = tuple(
         (
             filter_expression.name,

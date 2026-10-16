@@ -35,6 +35,7 @@ def create_pydantic_types(
     type[StrawberryTypeFromPydantic[BaseModel]],
     type[StrawberryTypeFromPydantic[BaseModel]],
 ]:
+    """Generate recursive Strawberry input/output types for a Pydantic model."""
     if model_type in _input_types:
         return _input_types[model_type], _output_types[model_type]
 

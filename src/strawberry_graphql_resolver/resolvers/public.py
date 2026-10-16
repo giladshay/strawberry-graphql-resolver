@@ -20,6 +20,13 @@ def resolve_query(
     *,
     db: DBType | str | None = None,
 ) -> StrawberryField | Callable[[Callable[..., Sequence[BaseModel]]], StrawberryField]:
+    """Turn a typed handler into a Strawberry GraphQL field.
+
+    Args:
+        query_handler: Handler accepting a parsed or compiled query.
+        db: Optional compiler mode. ``DBType.NONE`` passes the original
+            :class:`QueryExpression` to the handler.
+    """
     if query_handler is None:
         return cast(
             Callable[[Callable[..., Sequence[BaseModel]]], StrawberryField],
@@ -47,5 +54,6 @@ def flattened_pydantic_resolver(
     model_type: type[Queryable],
     query_handler: Callable[[QueryExpression], Sequence[BaseModel]] | None = None,
 ) -> Callable[..., list[StrawberryTypeFromPydantic[BaseModel]]]:
+    """Create a resolver that converts returned Pydantic models to Strawberry."""
     handler = query_handler if query_handler is not None else model_type.submit
     return create_query_resolver(model_type, handler)

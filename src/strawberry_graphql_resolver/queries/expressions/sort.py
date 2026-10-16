@@ -5,5 +5,7 @@ from strawberry_graphql_resolver.queries.operators import SortOrder
 
 
 class QuerySortExpression(BaseQueryExpression):
+    """Represent one field ordering instruction."""
+
     name: str
     order: SortOrder

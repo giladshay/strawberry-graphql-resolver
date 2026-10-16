@@ -5,4 +5,6 @@ from pydantic.alias_generators import to_camel
 
 
 class BaseQueryExpression(BaseModel):
+    """Base Pydantic model for query expression values."""
+
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)

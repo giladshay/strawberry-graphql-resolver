@@ -15,6 +15,8 @@ from strawberry_graphql_resolver.queries.queryable_metaclass import QueryableMet
 
 
 class Queryable(ABC, BaseModel, metaclass=QueryableMetaclass):
+    """Base model that exposes a fluent query-building API."""
+
     @classmethod
     @abstractmethod
     def submit(cls, query: QueryExpression) -> Sequence[Self]: ...
@@ -28,6 +30,8 @@ class Queryable(ABC, BaseModel, metaclass=QueryableMetaclass):
 
 
 class QueryBuilder[T: Queryable]:
+    """Accumulate filters and sorts before submitting a query."""
+
     def __init__(self, schema: type[T]) -> None:
         self._submit = schema.submit
         self._schema = schema

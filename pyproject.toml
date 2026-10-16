@@ -29,6 +29,14 @@ test = [
     "pytest-cov~=7.1",
     "testcontainers[mongodb,mssql]~=4.13",
 ]
+docs = [
+    "mike~=2.1",
+    "mkdocs-material~=9.6",
+    "mkdocstrings[python]~=0.29.0",
+    "pymdown-extensions~=11.0",
+    "sphinx~=8.2",
+    "sphinx-autodoc-typehints~=3.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -10,6 +10,8 @@ from strawberry_graphql_resolver.queries.operators import Comparison, SortOrder
 
 
 class FieldMapper:
+    """Build filter and sort expressions through Python operators."""
+
     def __init__(self, name: str) -> None:
         self._name = name
 

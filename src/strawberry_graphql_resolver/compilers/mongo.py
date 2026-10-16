@@ -19,11 +19,14 @@ _COMPARISON_TO_MONGO: dict[Comparison, MongoComparison] = {
 
 
 class MongoDBQuery(BaseModel):
+    """MongoDB filter and sort values accepted by PyMongo."""
+
     filters: dict[str, dict[MongoComparison, Any]]
     sorts: list[tuple[str, int]]
 
 
 def compile_mongo(query: QueryExpression) -> MongoDBQuery:
+    """Compile a query expression into a PyMongo-compatible query model."""
     filters: dict[str, Any] = {}
     for filter_expression in query.filters:
         operator = _COMPARISON_TO_MONGO[filter_expression.operator]
