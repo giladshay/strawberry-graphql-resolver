@@ -40,7 +40,12 @@ def compile_sql(query: QueryExpression) -> SQLQuery:
         )
         for sort in query.sorts
     )
-    fields = ", ".join(query.field_names) or "*"
+    fields = (
+        ", ".join(
+            field_name for field_name in query.field_names if "{" not in field_name
+        )
+        or "*"
+    )
     statement = f"SELECT {fields} FROM {query.schema_name}"
     if where := " AND ".join(f"{name} {operator} %s" for name, operator, _ in filters):
         statement += f" WHERE {where}"

@@ -4,7 +4,7 @@ import inspect
 import types
 from collections.abc import Callable, Sequence
 from dataclasses import field
-from typing import Any, cast, get_type_hints
+from typing import Any, cast, get_args, get_type_hints
 
 import strawberry
 from pydantic import BaseModel
@@ -43,11 +43,23 @@ def create_query_resolver(
     handler_parameters = tuple(inspect.signature(query_handler).parameters)
     handler = cast(Any, query_handler)
 
+    def is_filterable(field_type: Any) -> bool:
+        candidates = get_args(field_type) or (field_type,)
+        return not any(
+            isinstance(candidate, type) and issubclass(candidate, BaseModel)
+            for candidate in candidates
+        )
+
     def create_input_type(name: str, annotations: dict[str, Any]) -> type[Any]:
         namespace = {field_name: field(default=None) for field_name in annotations}
         namespace["__annotations__"] = annotations
         return strawberry.input(type(name, (), namespace))
 
+    filterable_fields = {
+        field_name: field_type
+        for field_name, field_type in field_types.items()
+        if is_filterable(field_type)
+    }
     filter_types = {
         field_name: create_input_type(
             f"{model_type.__name__}{field_name.title()}Filter",
@@ -56,7 +68,7 @@ def create_query_resolver(
                 for operator_name in Comparison.__members__
             },
         )
-        for field_name, field_type in field_types.items()
+        for field_name, field_type in filterable_fields.items()
     }
     filters_type = create_input_type(
         f"{model_type.__name__}Filters",
@@ -67,7 +79,7 @@ def create_query_resolver(
     )
     sorts_type = create_input_type(
         f"{model_type.__name__}Sorts",
-        {field_name: SortOrder | None for field_name in field_types},
+        {field_name: SortOrder | None for field_name in filterable_fields},
     )
     query_type = strawberry.input(
         type(
