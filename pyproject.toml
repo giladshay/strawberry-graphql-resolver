@@ -1,0 +1,28 @@
+[project]
+name = "strawberry-graphql-resolver"
+version = "0.1.0"
+description = "Resolve and map Pydantic models to Strawberry GraphQL types."
+readme = "README.md"
+authors = [
+    { name = "Gil-Ad Shay", email = "giladshay123@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic~=2.14",
+    "strawberry-graphql~=0.335.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.21,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+lint = [
+    "ruff>=0.17.0",
+    "ty>=0.0.86",
+]
+
+[tool.uv.workspace]
+members = [
+    ".",
+]
