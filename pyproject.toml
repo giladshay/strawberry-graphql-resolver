@@ -23,6 +23,9 @@ lint = [
     "ty>=0.0.86",
 ]
 
+[tool.ty.src]
+exclude = ["example"]
+
 [tool.uv.workspace]
 members = [
     ".",
