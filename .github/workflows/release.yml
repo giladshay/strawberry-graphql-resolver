@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v<version> tag to release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Validate tag and build artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: metadata
+        name: Validate package version and tag
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="$(uv run --no-project python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          print(tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"])
+          PY
+          )"
+
+          if [[ "$VERSION" =~ ^(.+)b$ ]]; then
+            BASE="${BASH_REMATCH[1]}"
+            [[ "$TAG" =~ ^v${BASE}b[0-9]+$ ]] || {
+              echo "::error::Expected a beta tag v${BASE}b<number>, got $TAG"
+              exit 1
+            }
+          else
+            [[ "$TAG" == "v${VERSION}" ]] || {
+              echo "::error::Expected v${VERSION}, got $TAG"
+              exit 1
+            }
+          fi
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
+      - run: uv sync --all-packages --all-groups
+      - run: uv build --out-dir dist
+      - run: uv run --with twine twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+          if-no-files-found: error
+      - run: uv run mkdocs build --strict
+      - run: uv run sphinx-build -W -b html docs/sphinx docs/sphinx/_build/html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publish-pypi:
+    name: Publish package to PyPI
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/strawberry-graphql-resolver
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  publish-pages:
+    name: Publish documentation to GitHub Pages
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4

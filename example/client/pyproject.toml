@@ -1,0 +1,22 @@
+[project]
+name = "client"
+version = "0.1.0"
+description = "Example of client using my package"
+readme = "README.md"
+authors = [
+    { name = "Gil-Ad Shay", email = "giladshay123@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "strawberry-graphql-resolver",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.21,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+strawberry-graphql-resolver = { path = "../.." }

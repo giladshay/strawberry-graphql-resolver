@@ -1,0 +1,16 @@
+.venv
+uv.lock
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+.vscode/
+site/
+docs/sphinx/_build/
+docs/sphinx/generated/
+
+.coverage

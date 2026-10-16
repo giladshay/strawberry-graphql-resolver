@@ -1,0 +1,62 @@
+name: Create release tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit to tag
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Calculate and create version tag
+        env:
+          TAG_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          print(tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"])
+          PY
+          )"
+
+          if [[ "$VERSION" =~ ^(.+)b$ ]]; then
+            BASE="${BASH_REMATCH[1]}"
+            HIGHEST="$(
+              git tag --list "v${BASE}b*" |
+                python -c 'import re, sys
+          base = sys.argv[1]
+          pattern = re.compile(r"^v" + re.escape(base) + r"b([0-9]+)$")
+          numbers = [int(match.group(1)) for tag in sys.stdin for match in [pattern.fullmatch(tag.strip())] if match]
+          print(max(numbers, default=-1))' "$BASE"
+            )"
+            TAG="v${BASE}b$((HIGHEST + 1))"
+          else
+            TAG="v${VERSION}"
+          fi
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$TAG" "$TAG_REF" --message "Release $TAG"
+          git push origin "$TAG"
+          echo "Created $TAG from $TAG_REF"
