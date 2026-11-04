@@ -171,6 +171,10 @@ def _create_sql() -> tuple[SqlServerContainer, Backend]:
 
 def _create_mongo() -> tuple[MongoDbContainer, Backend]:
     container = MongoDbContainer("mongo:8.0")
+    # MongoDB 8 refuses to start on Linux kernels 6.19 through 7.0.13 because
+    # of a TCMalloc/rseq incompatibility (SERVER-121912). Setting this tunable
+    # bypasses the startup guard on affected kernels.
+    container.with_env("GLIBC_TUNABLES", "glibc.pthread.rseq=1")
     container.start()
     return container, _seed_mongo(container)
 

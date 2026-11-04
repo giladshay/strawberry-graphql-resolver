@@ -33,7 +33,10 @@ jobs:
 
   system:
     name: System tests
-    runs-on: ubuntu-latest
+    # MongoDB 8 cannot start on the kernel used by the ubuntu-26.04
+    # (ubuntu-latest) runner (SERVER-121912). Keep the system tests on
+    # ubuntu-24.04 until MongoDB ships a version that supports that kernel.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
