@@ -41,6 +41,18 @@ class Customer(BaseModel):
         return value.upper()
 
 
+class Person(BaseModel):
+    children: list[Person]
+    age: int
+
+
+class TreeNode(BaseModel):
+    children: list[TreeNode]
+    parent: TreeNode | None = None
+    labels: list[str] = []
+    lookup: dict[str, TreeNode] = {}
+
+
 def test_nested_pydantic_types_support_constrained_and_url_fields() -> None:
     input_type, output_type = create_pydantic_types(Customer)
     customer = Customer(
@@ -54,6 +66,37 @@ def test_nested_pydantic_types_support_constrained_and_url_fields() -> None:
     assert converted_input.name == "Ada"
     assert converted_output.address.city == "London"
     assert str(converted_output.address.website) == ("https://example.com/")
+
+
+def test_recursive_pydantic_types_support_nested_conversion() -> None:
+    input_type, output_type = create_pydantic_types(Person)
+    person = Person(children=[Person(children=[], age=2)], age=1)
+
+    converted_input = cast(Any, input_type.from_pydantic(person))
+    converted_output = cast(Any, output_type.from_pydantic(person))
+
+    assert converted_input.children[0].age == 2
+    assert converted_output.children[0].age == 2
+
+
+def test_recursive_pydantic_types_support_unions_and_container_fields() -> None:
+    input_type, output_type = create_pydantic_types(TreeNode)
+    node = TreeNode(
+        children=[TreeNode(children=[], labels=["child"])],
+        parent=TreeNode(children=[], labels=["parent"]),
+        labels=["root"],
+        lookup={"first": TreeNode(children=[], labels=["lookup"])},
+    )
+
+    converted_input = cast(Any, input_type.from_pydantic(node))
+    converted_output = cast(Any, output_type.from_pydantic(node))
+
+    assert converted_input.children[0].labels == ["child"]
+    assert converted_input.parent.labels == ["parent"]
+    assert converted_input.lookup["first"].labels == ["lookup"]
+    assert converted_output.children[0].labels == ["child"]
+    assert converted_output.parent.labels == ["parent"]
+    assert converted_output.lookup["first"].labels == ["lookup"]
 
 
 def test_none_database_mode_passes_original_query_expression() -> None:
