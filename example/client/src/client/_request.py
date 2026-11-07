@@ -25,6 +25,7 @@ def submit_query[ModelT: Queryable](
 
     if result.get("errors"):
         raise RuntimeError(f"GraphQL request failed: {result['errors']}")
-    return [
-        model_type.model_validate(item) for item in result["data"][query.schema_name]
-    ]
+    items = result["data"][query.schema_name]
+    if query.field_names == list(model_type.model_fields):
+        return [model_type.model_validate(item) for item in items]
+    return [model_type.model_construct(**item) for item in items]

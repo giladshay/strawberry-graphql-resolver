@@ -19,3 +19,4 @@ class Product(Queryable):
 
 if __name__ == "__main__":
     print(Product.where(Product.name == "Keyboard").submit())
+    print(Product.only(Product.name, Product.price).submit())

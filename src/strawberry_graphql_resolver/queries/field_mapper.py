@@ -15,6 +15,11 @@ class FieldMapper:
     def __init__(self, name: str) -> None:
         self._name = name
 
+    @property
+    def name(self) -> str:
+        """The model field this handle refers to."""
+        return self._name
+
     @override
     def __eq__(self, other: object) -> QueryFilterExpression:  # ty: ignore[invalid-method-override]
         return QueryFilterExpression(

@@ -20,3 +20,5 @@ class User(Queryable):
 if __name__ == "__main__":
     print(User.where(User.name == "John").submit())
     print(User.sort(+User.age).submit())
+    print(User.where(User.name == "John").only(User.name).submit())
+    print(User.where(User.name == "John").only(User.name, User.age).submit())
