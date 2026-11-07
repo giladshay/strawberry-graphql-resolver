@@ -20,7 +20,11 @@ class User(Queryable):
 
 
 adults = User.where(User.age >= 18).sort(+User.name).submit()
+names = User.where(User.age >= 18).only(User.name).submit()
 ```
+
+Refer to fields through the class (``User.name``) so `only` and `exclude`
+complete and validate field names without any code generation.
 
 The unary `+` operator means ascending order; unary `-` means descending.
 
