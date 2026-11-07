@@ -288,6 +288,39 @@ def test_custom_field_selection_methods_are_preserved() -> None:
     assert CustomQuery.only("name") == ("custom", ("name",))
 
 
+def test_only_handles_serialize_to_graphql_selection() -> None:
+    builder = PeopleQuery.where(cast(Any, PeopleQuery.name == "John")).only(
+        PeopleQuery.name, PeopleQuery.age
+    )
+    from strawberry_graphql_resolver.queries.expressions import QueryExpression
+
+    expression = QueryExpression(
+        schema_name="people",
+        field_names=list(builder._selected_fields or []),
+        filters=builder._filters,
+        sorts=builder._sorts,
+    )
+    graphql, _variables = expression.to_graphql()
+    assert "    name" in graphql
+    assert "    age" in graphql
+    assert "missing" not in graphql
+
+
+def test_exclude_handles_serialize_to_graphql_selection() -> None:
+    builder = PeopleQuery.exclude(PeopleQuery.age)
+    from strawberry_graphql_resolver.queries.expressions import QueryExpression
+
+    expression = QueryExpression(
+        schema_name="people",
+        field_names=list(builder._selected_fields or []),
+        filters=builder._filters,
+        sorts=builder._sorts,
+    )
+    graphql, _variables = expression.to_graphql()
+    assert "    name" in graphql
+    assert "    age" not in graphql
+
+
 def test_only_accepts_field_handles() -> None:
     result = (
         PeopleQuery.where(cast(Any, PeopleQuery.name == "John"))
