@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from pydantic import Field, PrivateAttr
@@ -17,6 +18,19 @@ class QueryExpression(BaseQueryExpression):
     field_names: list[str] = Field(default_factory=list)
     filters: list[QueryFilterExpression] = Field(default_factory=list)
     sorts: list[QuerySortExpression] = Field(default_factory=list)
+
+    def parse_result(
+        self, model_type: type[Any], result: dict[str, Any]
+    ) -> Sequence[Any]:
+        """Parse a GraphQL JSON *result* into model instances.
+
+        Handles partial selections (``only`` / ``exclude``) automatically.
+        The HTTP request itself is the caller's responsibility; this helper
+        only interprets the already-received response.
+        """
+        from strawberry_graphql_resolver.results import parse_graphql_result
+
+        return parse_graphql_result(model_type, self, result)
 
     def to_graphql(self) -> tuple[str, dict[str, Any]]:
         """Return a GraphQL document and variables payload for this query."""
