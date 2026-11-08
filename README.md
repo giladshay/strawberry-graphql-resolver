@@ -64,6 +64,16 @@ names = User.where(User.age >= 18).only(User.name).submit()
 Refer to fields through the class (``User.name``) so `only` and `exclude`
 complete and validate field names without any code generation.
 
+When executing a query on the server, use ``construct_model`` /
+``construct_models`` to build (possibly partial) model instances from result
+rows without worrying about validation vs. construction:
+
+```python
+from strawberry_graphql_resolver import construct_models
+
+return construct_models(User, rows)
+```
+
 Build a GraphQL resolver:
 
 ```python

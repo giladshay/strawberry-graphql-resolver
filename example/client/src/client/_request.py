@@ -5,7 +5,11 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.request import Request, urlopen
 
-from strawberry_graphql_resolver import Queryable, QueryExpression
+from strawberry_graphql_resolver import (
+    Queryable,
+    QueryExpression,
+    construct_model,
+)
 
 
 def submit_query[ModelT: Queryable](
@@ -26,6 +30,4 @@ def submit_query[ModelT: Queryable](
     if result.get("errors"):
         raise RuntimeError(f"GraphQL request failed: {result['errors']}")
     items = result["data"][query.schema_name]
-    if query.field_names == list(model_type.model_fields):
-        return [model_type.model_validate(item) for item in items]
-    return [model_type.model_construct(**item) for item in items]
+    return [construct_model(model_type, item) for item in items]  # type: ignore[return-value]

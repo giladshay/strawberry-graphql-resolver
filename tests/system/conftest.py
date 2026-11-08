@@ -17,7 +17,12 @@ from pymssql import Connection, connect
 from testcontainers.community.mongodb import MongoDbContainer
 from testcontainers.community.mssql import SqlServerContainer
 
-from strawberry_graphql_resolver import DBType, MongoDBQuery, SQLQuery
+from strawberry_graphql_resolver import (
+    DBType,
+    MongoDBQuery,
+    SQLQuery,
+    construct_models,
+)
 
 from .app import Customer, Location, create_app
 
@@ -42,17 +47,7 @@ class SqlBackend:
         with self.connection.cursor(as_dict=True) as cursor:
             cursor.execute(query.statement, query.parameters)
             rows = cursor.fetchall()
-        results: list[Customer] = []
-        for row in rows:
-            data: dict[str, Any] = dict(row)
-            if "location" in data and isinstance(data["location"], str):
-                data["location"] = json.loads(str(data["location"]))
-            required = {"id", "name", "age", "location"}
-            if required.issubset(data):
-                results.append(Customer.model_validate(data))
-            else:
-                results.append(Customer.model_construct(**data))
-        return results
+        return construct_models(Customer, (dict(row) for row in rows))
 
     def close(self) -> None:
         self.connection.close()
@@ -75,15 +70,7 @@ class MongoBackend:
             documents = self.collection.find(query.filters)
         if query.sorts:
             documents = documents.sort(query.sorts)
-        required = {"id", "name", "age", "location"}
-        results: list[Customer] = []
-        for document in documents:
-            document_data: dict[str, Any] = dict(document)
-            if required.issubset(document_data):
-                results.append(Customer.model_validate(document_data))
-            else:
-                results.append(Customer.model_construct(**document_data))
-        return results
+        return construct_models(Customer, (dict(document) for document in documents))
 
     def close(self) -> None:
         self.client.close()
