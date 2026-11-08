@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from pydantic import Field, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 
 from strawberry_graphql_resolver.queries.expressions.base import BaseQueryExpression
 from strawberry_graphql_resolver.queries.expressions.filter import QueryFilterExpression
@@ -19,9 +19,9 @@ class QueryExpression(BaseQueryExpression):
     filters: list[QueryFilterExpression] = Field(default_factory=list)
     sorts: list[QuerySortExpression] = Field(default_factory=list)
 
-    def parse_result(
-        self, model_type: type[Any], result: dict[str, Any]
-    ) -> Sequence[Any]:
+    def parse_result[ModelT: BaseModel](
+        self, model_type: type[ModelT], result: dict[str, Any]
+    ) -> Sequence[ModelT]:
         """Parse a GraphQL JSON *result* into model instances.
 
         Handles partial selections (``only`` / ``exclude``) automatically.
