@@ -8,6 +8,7 @@ from typing import Any, Protocol, cast
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import AnyUrl
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymssql import Connection, connect
@@ -18,7 +19,7 @@ from testcontainers.community.mssql import SqlServerContainer
 
 from strawberry_graphql_resolver import DBType, MongoDBQuery, SQLQuery
 
-from .app import Customer, create_app
+from .app import Customer, Location, create_app
 
 
 class Backend(Protocol):
@@ -41,12 +42,17 @@ class SqlBackend:
         with self.connection.cursor(as_dict=True) as cursor:
             cursor.execute(query.statement, query.parameters)
             rows = cursor.fetchall()
-        return [
-            Customer.model_validate(
-                {**row, "location": json.loads(str(row["location"]))}
-            )
-            for row in rows
-        ]
+        results: list[Customer] = []
+        for row in rows:
+            data: dict[str, Any] = dict(row)
+            if "location" in data and isinstance(data["location"], str):
+                data["location"] = json.loads(str(data["location"]))
+            required = {"id", "name", "age", "location"}
+            if required.issubset(data):
+                results.append(Customer.model_validate(data))
+            else:
+                results.append(Customer.model_construct(**data))
+        return results
 
     def close(self) -> None:
         self.connection.close()
@@ -61,10 +67,23 @@ class MongoBackend:
 
     def query(self, query: SQLQuery | MongoDBQuery) -> list[Customer]:
         assert isinstance(query, MongoDBQuery)
-        documents = self.collection.find(query.filters)
+        projection = {field: 1 for field in query.projection}
+        if projection:
+            projection["_id"] = 0
+            documents = self.collection.find(query.filters, projection)
+        else:
+            documents = self.collection.find(query.filters)
         if query.sorts:
             documents = documents.sort(query.sorts)
-        return [Customer.model_validate(document) for document in documents]
+        required = {"id", "name", "age", "location"}
+        results: list[Customer] = []
+        for document in documents:
+            document_data: dict[str, Any] = dict(document)
+            if required.issubset(document_data):
+                results.append(Customer.model_validate(document_data))
+            else:
+                results.append(Customer.model_construct(**document_data))
+        return results
 
     def close(self) -> None:
         self.client.close()
@@ -143,19 +162,19 @@ def _customers() -> list[Customer]:
             id=1,
             name=" Ada ",
             age=37,
-            location={"city": "London", "website": "https://ada.example"},
+            location=Location(city="London", website=AnyUrl("https://ada.example")),
         ),
         Customer(
             id=2,
             name="Grace",
             age=28,
-            location={"city": "New York", "website": "https://grace.example"},
+            location=Location(city="New York", website=AnyUrl("https://grace.example")),
         ),
         Customer(
             id=3,
             name="Linus",
             age=18,
-            location={"city": "Helsinki", "website": "https://linus.example"},
+            location=Location(city="Helsinki", website=AnyUrl("https://linus.example")),
         ),
     ]
 

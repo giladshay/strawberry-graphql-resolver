@@ -46,6 +46,15 @@ def test_compile_sql_returns_parameterized_statement(query: QueryExpression) -> 
     assert compiled.sorts == (("age", "DESC"), ("name", "ASC"))
 
 
+def test_compile_sql_normalizes_nested_field_names() -> None:
+    query = QueryExpression(
+        schema_name="users",
+        field_names=["name", "location { city website }"],
+    )
+    compiled = compile_sql(query)
+    assert compiled.statement == "SELECT name, location FROM users"
+
+
 def test_compile_mongo_returns_pymongo_filter_and_sort(
     query: QueryExpression,
 ) -> None:
@@ -57,6 +66,16 @@ def test_compile_mongo_returns_pymongo_filter_and_sort(
         "name": {"$ne": "blocked"},
     }
     assert compiled.sorts == [("age", -1), ("name", 1)]
+    assert compiled.projection == ["name", "age"]
+
+
+def test_compile_mongo_projects_requested_fields() -> None:
+    query = QueryExpression(
+        schema_name="users",
+        field_names=["email", "profile { bio avatar }"],
+    )
+    compiled = compile_mongo(query)
+    assert compiled.projection == ["email", "profile"]
 
 
 def test_compilers_handle_an_empty_query() -> None:

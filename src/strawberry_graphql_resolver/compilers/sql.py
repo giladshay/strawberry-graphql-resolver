@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from strawberry_graphql_resolver.compilers.field_names import selected_top_level_fields
 from strawberry_graphql_resolver.queries import Comparison, QueryExpression
 
 SqlComparison = Literal["=", "<>", "<", "<=", ">", ">="]
@@ -43,12 +44,7 @@ def compile_sql(query: QueryExpression) -> SQLQuery:
         )
         for sort in query.sorts
     )
-    fields = (
-        ", ".join(
-            field_name for field_name in query.field_names if "{" not in field_name
-        )
-        or "*"
-    )
+    fields = ", ".join(selected_top_level_fields(query.field_names)) or "*"
     statement = f"SELECT {fields} FROM {query.schema_name}"
     if where := " AND ".join(f"{name} {operator} %s" for name, operator, _ in filters):
         statement += f" WHERE {where}"

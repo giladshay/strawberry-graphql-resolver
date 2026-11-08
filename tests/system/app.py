@@ -40,7 +40,7 @@ def create_app(backend: Any) -> FastAPI:
     if backend.db_type is DBType.SQL:
 
         @strawberry.type
-        class Query:
+        class Query:  # pyright: ignore[reportRedeclaration]
             @resolve_query(db=DBType.SQL)
             def customers(self, query: SQLQuery) -> list[Customer]:
                 return cast(list[Customer], backend.query(query))

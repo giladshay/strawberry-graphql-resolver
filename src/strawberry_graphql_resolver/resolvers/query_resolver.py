@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from strawberry.experimental.pydantic.conversion_types import (
     StrawberryTypeFromPydantic,
 )
+from strawberry.types import Info
 
 from strawberry_graphql_resolver.compilers import (
     DBType,
@@ -52,7 +53,7 @@ def create_query_resolver(
 
     def create_input_type(name: str, annotations: dict[str, Any]) -> type[Any]:
         namespace = {field_name: field(default=None) for field_name in annotations}
-        namespace["__annotations__"] = annotations
+        namespace["__annotations__"] = annotations  # pyright: ignore[reportArgumentType]
         return strawberry.input(type(name, (), namespace))
 
     filterable_fields = {
@@ -97,12 +98,34 @@ def create_query_resolver(
         name=f"{model_type.__name__}Input",
     )
 
+    def _selected_field_names(info: Info | None) -> list[str]:
+        if info is None:
+            return list(field_types)
+        try:
+            selections = info.selected_fields
+            if selections and getattr(selections[0], "selections", None):
+                names = [
+                    name
+                    for selection in selections[0].selections
+                    if (name := getattr(selection, "name", None)) is not None
+                ]
+            else:
+                names = [
+                    name
+                    for selection in selections
+                    if (name := getattr(selection, "name", None)) is not None
+                ]
+        except Exception:  # noqa: BLE001
+            names = []
+        known = [name for name in names if name in field_types]
+        return list(known) if known else list(field_types)
+
     def resolver(
-        self, query: Any = None
+        self, query: Any = None, info: Info | None = None
     ) -> list[StrawberryTypeFromPydantic[BaseModel]]:
         query_model = QueryExpression(
             schema_name=f"{model_type.__name__.lower()}s",
-            field_names=list(field_types),
+            field_names=_selected_field_names(info),
             filters=[
                 QueryFilterExpression(name=field_name, operator=operator, value=value)
                 for field_name, field_filter in input_values(query, "filters")
@@ -132,6 +155,12 @@ def create_query_resolver(
             "query",
             inspect.Parameter.KEYWORD_ONLY,
             annotation=query_type | None,
+            default=None,
+        ),
+        inspect.Parameter(
+            "info",
+            inspect.Parameter.KEYWORD_ONLY,
+            annotation=Info,
             default=None,
         ),
     ]
