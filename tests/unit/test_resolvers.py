@@ -14,6 +14,11 @@ from pydantic import (
 
 from strawberry_graphql_resolver import DBType, MongoDBQuery, SQLQuery, resolve_query
 from strawberry_graphql_resolver.queries import QueryExpression
+from strawberry_graphql_resolver.resolvers.input_values import (
+    input_values,
+    operator_values,
+)
+from strawberry_graphql_resolver.resolvers.public import flattened_pydantic_resolver
 from strawberry_graphql_resolver.resolvers.pydantic_types import create_pydantic_types
 
 
@@ -133,3 +138,117 @@ def test_sql_and_mongo_modes_pass_compiled_models() -> None:
 
     assert isinstance(received[0], SQLQuery)
     assert isinstance(received[1], MongoDBQuery)
+
+
+def test_resolver_uses_selected_fields_from_info() -> None:
+    from types import SimpleNamespace
+
+    received: list[Any] = []
+
+    def handler(query: SQLQuery) -> Sequence[Customer]:
+        received.append(query)
+        return cast(Sequence[Customer], [])
+
+    resolver = cast(Any, resolve_query(handler, db=DBType.SQL))
+    fake_info = SimpleNamespace(
+        selected_fields=[
+            SimpleNamespace(name="customers", selections=[SimpleNamespace(name="name")])
+        ]
+    )
+    resolver.base_resolver(None, query=None, info=fake_info)
+    assert "name" in received[0].statement
+
+    # selected_fields without sub-selections uses their names directly
+    fake_info2 = SimpleNamespace(
+        selected_fields=[SimpleNamespace(name="age", selections=[])]
+    )
+    received2: list[Any] = []
+
+    def handler2(query: SQLQuery) -> Sequence[Customer]:
+        received2.append(query)
+        return cast(Sequence[Customer], [])
+
+    resolver2 = cast(Any, resolve_query(handler2, db=DBType.SQL))
+    resolver2.base_resolver(None, query=None, info=fake_info2)
+    assert "age" in received2[0].statement
+
+
+def test_resolver_handler_with_self_parameter() -> None:
+    received: list[Any] = []
+
+    def handler(self: Any, query: SQLQuery) -> Sequence[Customer]:
+        received.append(query)
+        return cast(Sequence[Customer], [])
+
+    resolver = cast(Any, resolve_query(handler, db=DBType.SQL))
+    resolver.base_resolver(None, query=None)
+    assert isinstance(received[0], SQLQuery)
+
+
+def test_input_values_handles_none_and_populated() -> None:
+    assert input_values(None, "filters") == []
+
+    class Filters:
+        name: str = "Ada"
+        age: int | None = None
+
+    class Container:
+        filters: Filters = Filters()
+
+    assert input_values(Container, "filters") == [("name", "Ada")]
+
+
+def test_operator_values_filters_none_operators() -> None:
+    from enum import Enum
+
+    class Op(Enum):
+        EQ = "eq"
+        NEQ = "neq"
+
+    class Value:
+        EQ = 5
+        NEQ = None
+
+    result = operator_values(
+        Value, type("Ops", (), {"__members__": {"EQ": Op.EQ, "NEQ": Op.NEQ}})
+    )
+    assert result == [(Op.EQ, 5)]
+
+
+def test_resolve_query_decorator_form() -> None:
+    @resolve_query(db=DBType.NONE)
+    def handler(query: QueryExpression) -> Sequence[Customer]:
+        return cast(Sequence[Customer], [])
+
+    field = cast(Any, handler)
+    result = field.base_resolver(None, query=None)
+    assert result == []
+
+
+def test_resolve_query_staticmethod_form() -> None:
+    def handler(query: QueryExpression) -> Sequence[Customer]:
+        return cast(Sequence[Customer], [])
+
+    field = cast(Any, resolve_query(staticmethod(handler), db=DBType.NONE))
+    result = field.base_resolver(None, query=None)
+    assert result == []
+
+
+def test_resolve_query_owner_based_model_type() -> None:
+    class OwnerModel(Customer):
+        @classmethod
+        def handler(cls, query: QueryExpression) -> Sequence[Customer]:
+            return cast(Sequence[Customer], [])
+
+    field = cast(Any, resolve_query(OwnerModel.handler, db=DBType.NONE))
+    result = field.base_resolver(None, query=None)
+    assert result == []
+
+
+def test_flattened_pydantic_resolver() -> None:
+    def handler(query: QueryExpression) -> Sequence[Customer]:
+        return cast(Sequence[Customer], [])
+
+    resolver = flattened_pydantic_resolver(cast(Any, Customer), handler)
+    result = resolver(None, query=None)
+    assert result == []

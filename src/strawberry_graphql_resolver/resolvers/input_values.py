@@ -9,10 +9,13 @@ def input_values(value: Any, name: str) -> list[tuple[str, Any]]:
     selected = getattr(value, name, None) if value is not None else None
     if selected is None:
         return []
+    annotations = getattr(selected, "__annotations__", None)
+    if annotations is None:
+        annotations = getattr(type(selected), "__annotations__", {})
     return [
         (field_name, getattr(selected, field_name))
-        for field_name in selected.__annotations__
-        if getattr(selected, field_name) is not None
+        for field_name in annotations
+        if getattr(selected, field_name, None) is not None
     ]
 
 

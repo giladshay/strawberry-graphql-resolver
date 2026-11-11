@@ -13,7 +13,13 @@ from pymongo.errors import ServerSelectionTimeoutError
 from pymssql import connect
 from strawberry.fastapi import GraphQLRouter
 
-from strawberry_graphql_resolver import DBType, MongoDBQuery, SQLQuery, resolve_query
+from strawberry_graphql_resolver import (
+    DBType,
+    MongoDBQuery,
+    SQLQuery,
+    construct_models,
+    resolve_query,
+)
 
 
 @asynccontextmanager
@@ -97,14 +103,21 @@ class Query:
         with app.state.sql_database.cursor(as_dict=True) as cursor:
             cursor.execute(query.statement, query.parameters)
             rows = cursor.fetchall()
-        return [User.model_validate(dict(row)) for row in rows]
+        return construct_models(User, (dict(row) for row in rows))
 
     @resolve_query(db=DBType.MONGO_DB)
     def products(self, query: MongoDBQuery) -> list[Product]:
-        documents = app.state.mongo_database["products"].find(query.filters)
+        if query.projection:
+            projection = {field: 1 for field in query.projection}
+            projection["_id"] = 0
+            documents = app.state.mongo_database["products"].find(
+                query.filters, projection
+            )
+        else:
+            documents = app.state.mongo_database["products"].find(query.filters)
         if query.sorts:
             documents = documents.sort(query.sorts)
-        return [Product.model_validate(document) for document in documents]
+        return construct_models(Product, (dict(document) for document in documents))
 
 
 schema = strawberry.Schema(query=Query)

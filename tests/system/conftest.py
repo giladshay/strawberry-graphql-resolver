@@ -8,6 +8,7 @@ from typing import Any, Protocol, cast
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import AnyUrl
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymssql import Connection, connect
@@ -16,9 +17,14 @@ from pymssql import Connection, connect
 from testcontainers.community.mongodb import MongoDbContainer
 from testcontainers.community.mssql import SqlServerContainer
 
-from strawberry_graphql_resolver import DBType, MongoDBQuery, SQLQuery
+from strawberry_graphql_resolver import (
+    DBType,
+    MongoDBQuery,
+    SQLQuery,
+    construct_models,
+)
 
-from .app import Customer, create_app
+from .app import Customer, Location, create_app
 
 
 class Backend(Protocol):
@@ -41,12 +47,7 @@ class SqlBackend:
         with self.connection.cursor(as_dict=True) as cursor:
             cursor.execute(query.statement, query.parameters)
             rows = cursor.fetchall()
-        return [
-            Customer.model_validate(
-                {**row, "location": json.loads(str(row["location"]))}
-            )
-            for row in rows
-        ]
+        return construct_models(Customer, (dict(row) for row in rows))
 
     def close(self) -> None:
         self.connection.close()
@@ -61,10 +62,15 @@ class MongoBackend:
 
     def query(self, query: SQLQuery | MongoDBQuery) -> list[Customer]:
         assert isinstance(query, MongoDBQuery)
-        documents = self.collection.find(query.filters)
+        projection = {field: 1 for field in query.projection}
+        if projection:
+            projection["_id"] = 0
+            documents = self.collection.find(query.filters, projection)
+        else:
+            documents = self.collection.find(query.filters)
         if query.sorts:
             documents = documents.sort(query.sorts)
-        return [Customer.model_validate(document) for document in documents]
+        return construct_models(Customer, (dict(document) for document in documents))
 
     def close(self) -> None:
         self.client.close()
@@ -143,19 +149,19 @@ def _customers() -> list[Customer]:
             id=1,
             name=" Ada ",
             age=37,
-            location={"city": "London", "website": "https://ada.example"},
+            location=Location(city="London", website=AnyUrl("https://ada.example")),
         ),
         Customer(
             id=2,
             name="Grace",
             age=28,
-            location={"city": "New York", "website": "https://grace.example"},
+            location=Location(city="New York", website=AnyUrl("https://grace.example")),
         ),
         Customer(
             id=3,
             name="Linus",
             age=18,
-            location={"city": "Helsinki", "website": "https://linus.example"},
+            location=Location(city="Helsinki", website=AnyUrl("https://linus.example")),
         ),
     ]
 
