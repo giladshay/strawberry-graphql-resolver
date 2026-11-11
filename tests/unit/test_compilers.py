@@ -55,6 +55,17 @@ def test_compile_sql_normalizes_nested_field_names() -> None:
     assert compiled.statement == "SELECT name, location FROM users"
 
 
+def test_selected_top_level_fields_skips_empty_and_duplicates() -> None:
+    from strawberry_graphql_resolver.compilers.field_names import (
+        selected_top_level_fields,
+    )
+
+    assert selected_top_level_fields(["", "name", "name", "  ", "age { x }"]) == [
+        "name",
+        "age",
+    ]
+
+
 def test_compile_mongo_returns_pymongo_filter_and_sort(
     query: QueryExpression,
 ) -> None:
